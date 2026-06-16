@@ -1,69 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temperature Dashboard - SPE Practical</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #0f172a;
-        color: #e2e8f0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 40px 20px;
-        margin: 0;
-    }
-    h1 { font-size: 1.3rem; margin-bottom: 4px; }
-    .sub { color: #94a3b8; font-size: 0.85rem; margin-bottom: 30px; }
-    .card {
-        background: #1e293b;
-        border-radius: 16px;
-        padding: 30px 50px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(0,0,0,0.4);
-    }
-    .temp { font-size: 4rem; font-weight: bold; color: #38bdf8; }
-    .status {
-        margin-top: 10px;
-        font-size: 0.85rem;
-    }
-    .status.ok { color: #4ade80; }
-    .status.bad { color: #f87171; }
-    .status.wait { color: #facc15; }
-    .meta {
-        margin-top: 20px;
-        font-size: 0.8rem;
-        color: #64748b;
-        text-align: left;
-    }
-    .meta span { color: #cbd5e1; }
-    #log {
-        margin-top: 30px;
-        width: 360px;
-        max-height: 180px;
-        overflow-y: auto;
-        background: #0f172a;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        padding: 10px;
-        font-family: monospace;
-        font-size: 0.78rem;
-        color: #94a3b8;
-    }
-    #log div { padding: 2px 0; border-bottom: 1px solid #1e293b; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Temperature Dashboard</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+:root{
+  --bg:#0b1220;
+  --card:#111a2e;
+  --accent:#38bdf8;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+  --ok:#22c55e;
+  --bad:#ef4444;
+  --warn:#facc15;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:system-ui, Arial;
+  background: radial-gradient(circle at top, #111827, var(--bg));
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:40px 15px;
+}
+
+h1{
+  margin:0;
+  font-size:1.4rem;
+  letter-spacing:0.5px;
+}
+
+.sub{
+  color:var(--muted);
+  font-size:0.85rem;
+  margin-top:6px;
+}
+
+.card{
+  margin-top:25px;
+  width:320px;
+  background:rgba(17,26,46,0.85);
+  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:18px;
+  padding:30px;
+  text-align:center;
+  box-shadow:0 10px 40px rgba(0,0,0,0.4);
+}
+
+.temp{
+  font-size:3.5rem;
+  font-weight:700;
+  color:var(--accent);
+  margin-bottom:10px;
+}
+
+.status{
+  font-size:0.85rem;
+  padding:6px 10px;
+  border-radius:999px;
+  display:inline-block;
+}
+
+.status.ok{background:rgba(34,197,94,0.15); color:var(--ok);}
+.status.bad{background:rgba(239,68,68,0.15); color:var(--bad);}
+.status.wait{background:rgba(250,204,21,0.15); color:var(--warn);}
+
+.meta{
+  margin-top:15px;
+  font-size:0.75rem;
+  color:var(--muted);
+  text-align:left;
+  line-height:1.5;
+}
+
+.meta span{color:var(--text)}
+
+#log{
+  margin-top:25px;
+  width:320px;
+  max-height:200px;
+  overflow-y:auto;
+  border-radius:12px;
+  background:#0a1020;
+  border:1px solid #1f2a44;
+  padding:10px;
+  font-family:monospace;
+  font-size:0.75rem;
+}
+
+#log div{
+  padding:4px 0;
+  border-bottom:1px solid #15203a;
+  color:#93c5fd;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Live temperature dashboard</h1>
-<div class="sub">SPE Practical - Embedded Systems Software Integration</div>
+<h1>Temperature Monitoring Dashboard</h1>
+<div class="sub">SPE Practical • MQTT Live Stream</div>
 
 <div class="card">
-  <div class="temp" id="tempValue">-- &deg;C</div>
-  <div class="status wait" id="statusLine">Connecting to broker...</div>
+  <div class="temp" id="tempValue">-- °C</div>
+  <div class="status wait" id="statusLine">Connecting...</div>
+
   <div class="meta">
     Broker: <span id="brokerLabel"></span><br>
     Topic: <span id="topicLabel"></span><br>
@@ -74,71 +124,54 @@
 <div id="log"></div>
 
 <script>
-  // ----- CONFIG: edit these three lines for your setup -----
-  const WS_URL = "wss://broker.benax.rw:9002/mqtt";
-  const MQTT_TOPIC = "sensor_irasubiza_divine";
-  // -----------------------------------------------------------
+const WS_URL = "wss://broker.benax.rw:9002/mqtt";
+const MQTT_TOPIC = "sensor_irasubiza_divine";
 
-  document.getElementById("brokerLabel").textContent = WS_URL;
-  document.getElementById("topicLabel").textContent = MQTT_TOPIC;
+document.getElementById("brokerLabel").textContent = WS_URL;
+document.getElementById("topicLabel").textContent = MQTT_TOPIC;
 
-  const tempEl = document.getElementById("tempValue");
-  const statusEl = document.getElementById("statusLine");
-  const lastUpdateEl = document.getElementById("lastUpdate");
-  const logEl = document.getElementById("log");
+const tempEl = document.getElementById("tempValue");
+const statusEl = document.getElementById("statusLine");
+const logEl = document.getElementById("log");
+const lastUpdateEl = document.getElementById("lastUpdate");
 
-  function setStatus(text, cls) {
-    statusEl.textContent = text;
-    statusEl.className = "status " + cls;
-  }
+function setStatus(text, type){
+  statusEl.textContent = text;
+  statusEl.className = "status " + type;
+}
 
-  function addLog(text) {
-    const line = document.createElement("div");
-    const time = new Date().toLocaleTimeString();
-    line.textContent = `[${time}] ${text}`;
-    logEl.prepend(line);
-    while (logEl.childElementCount > 30) {
-      logEl.removeChild(logEl.lastChild);
-    }
-  }
+function log(msg){
+  const div = document.createElement("div");
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logEl.prepend(div);
+}
 
-  const client = mqtt.connect(WS_URL, {
-    reconnectPeriod: 3000,
-    connectTimeout: 8000,
-  });
+const client = mqtt.connect(WS_URL, {
+  reconnectPeriod: 2000
+});
 
-  client.on("connect", () => {
-    setStatus("Connected to broker", "ok");
-    addLog("Connected to broker");
-    client.subscribe(MQTT_TOPIC, (err) => {
-      if (err) {
-        setStatus("Subscribe failed: " + err.message, "bad");
-        addLog("Subscribe error: " + err.message);
-      } else {
-        addLog("Subscribed to topic: " + MQTT_TOPIC);
-      }
-    });
-  });
+client.on("connect", () => {
+  setStatus("Connected", "ok");
+  log("Connected to broker");
 
-  client.on("reconnect", () => {
-    setStatus("Reconnecting...", "wait");
-  });
+  client.subscribe(MQTT_TOPIC);
+});
 
-  client.on("error", (err) => {
-    setStatus("Connection error: " + err.message, "bad");
-    addLog("Error: " + err.message);
-  });
+client.on("reconnect", () => setStatus("Reconnecting...", "wait"));
 
-  client.on("close", () => {
-    setStatus("Disconnected", "bad");
-  });
+client.on("error", (e) => {
+  setStatus("Error", "bad");
+  log(e.message);
+});
 
-  client.on("message", (topic, payload) => {
-    const value = payload.toString();
-    tempEl.textContent = value + " \u00B0C";
-    lastUpdateEl.textContent = new Date().toLocaleTimeString();
-    addLog(`Received: ${value} on ${topic}`);
-  });
+client.on("message", (topic, payload) => {
+  const value = payload.toString();
+
+  tempEl.textContent = value + " °C";
+  lastUpdateEl.textContent = new Date().toLocaleTimeString();
+
+  log(`Temp: ${value}`);
+});
 </script>
 
 </body>
