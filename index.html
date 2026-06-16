@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Dashboard - SPE Practical</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        margin: 0;
+    }
+    h1 { font-size: 1.3rem; margin-bottom: 4px; }
+    .sub { color: #94a3b8; font-size: 0.85rem; margin-bottom: 30px; }
+    .card {
+        background: #1e293b;
+        border-radius: 16px;
+        padding: 30px 50px;
+        text-align: center;
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+    .temp { font-size: 4rem; font-weight: bold; color: #38bdf8; }
+    .status {
+        margin-top: 10px;
+        font-size: 0.85rem;
+    }
+    .status.ok { color: #4ade80; }
+    .status.bad { color: #f87171; }
+    .status.wait { color: #facc15; }
+    .meta {
+        margin-top: 20px;
+        font-size: 0.8rem;
+        color: #64748b;
+        text-align: left;
+    }
+    .meta span { color: #cbd5e1; }
+    #log {
+        margin-top: 30px;
+        width: 360px;
+        max-height: 180px;
+        overflow-y: auto;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 0.78rem;
+        color: #94a3b8;
+    }
+    #log div { padding: 2px 0; border-bottom: 1px solid #1e293b; }
+    </style>
+</head>
+<body>
+
+<h1>Live temperature dashboard</h1>
+<div class="sub">SPE Practical - Embedded Systems Software Integration</div>
+
+<div class="card">
+  <div class="temp" id="tempValue">-- &deg;C</div>
+  <div class="status wait" id="statusLine">Connecting to broker...</div>
+  <div class="meta">
+    Broker: <span id="brokerLabel"></span><br>
+    Topic: <span id="topicLabel"></span><br>
+    Last update: <span id="lastUpdate">Never</span>
+  </div>
+</div>
+
+<div id="log"></div>
+
+<script>
+  // ----- CONFIG: edit these three lines for your setup -----
+  const WS_URL = "wss://broker.benax.rw"; // try wss://...:8081/mqtt or ws://...:8080/mqtt - ask your instructor which port is open
+  const MQTT_TOPIC = "sensor_irasubiza_divine";
+  // -----------------------------------------------------------
+
+  document.getElementById("brokerLabel").textContent = WS_URL;
+  document.getElementById("topicLabel").textContent = MQTT_TOPIC;
+
+  const tempEl = document.getElementById("tempValue");
+  const statusEl = document.getElementById("statusLine");
+  const lastUpdateEl = document.getElementById("lastUpdate");
+  const logEl = document.getElementById("log");
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = "status " + cls;
+  }
+
+  function addLog(text) {
+    const line = document.createElement("div");
+    const time = new Date().toLocaleTimeString();
+    line.textContent = `[${time}] ${text}`;
+    logEl.prepend(line);
+    while (logEl.childElementCount > 30) {
+      logEl.removeChild(logEl.lastChild);
+    }
+  }
+
+  const client = mqtt.connect(WS_URL, {
+    reconnectPeriod: 3000,
+    connectTimeout: 8000,
+  });
+
+  client.on("connect", () => {
+    setStatus("Connected to broker", "ok");
+    addLog("Connected to broker");
+    client.subscribe(MQTT_TOPIC, (err) => {
+      if (err) {
+        setStatus("Subscribe failed: " + err.message, "bad");
+        addLog("Subscribe error: " + err.message);
+      } else {
+        addLog("Subscribed to topic: " + MQTT_TOPIC);
+      }
+    });
+  });
+
+  client.on("reconnect", () => {
+    setStatus("Reconnecting...", "wait");
+  });
+
+  client.on("error", (err) => {
+    setStatus("Connection error: " + err.message, "bad");
+    addLog("Error: " + err.message);
+  });
+
+  client.on("close", () => {
+    setStatus("Disconnected", "bad");
+  });
+
+  client.on("message", (topic, payload) => {
+    const value = payload.toString();
+    tempEl.textContent = value + " \u00B0C";
+    lastUpdateEl.textContent = new Date().toLocaleTimeString();
+    addLog(`Received: ${value} on ${topic}`);
+  });
+</script>
+
+</body>
+</html>
