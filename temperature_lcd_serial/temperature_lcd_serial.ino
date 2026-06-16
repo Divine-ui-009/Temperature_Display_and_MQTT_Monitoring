@@ -14,8 +14,8 @@
 #include <LiquidCrystal_I2C.h>
 
 // ----- USER CONFIG -----
-String CANDIDATE_NAME = "STUDENT DIVINE IRASUBIZA";   // <-- change to your name
-const int TEMP_PIN = A0;
+String CANDIDATE_NAME = "STUDENT DIVINE IRASUBIZA";
+const int TEMP_PIN = A2;
 const unsigned long READ_INTERVAL_MS = 2000;
 const unsigned long SCROLL_INTERVAL_MS = 350;
 // ------------------------
